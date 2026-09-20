@@ -40,7 +40,13 @@ jobs:
           cp index.html manifest.webmanifest sw.js _site/
           cp -r js icons _site/
 
+      # `enablement` active Pages tout seul au premier passage. Sans lui, la
+      # chaîne échoue sur « Get Pages site failed » tant que personne n'est
+      # allé cocher la case dans les réglages — un échec qui n'apprend rien
+      # et qu'on ne comprend qu'en lisant le journal.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
