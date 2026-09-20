@@ -69,6 +69,22 @@ android {
 }
 
 dependencies {
+    /**
+     * ALIGNE LA BIBLIOTHÈQUE STANDARD KOTLIN — sans quoi rien ne compile.
+     *
+     * Depuis Kotlin 1.8, `kotlin-stdlib-jdk7` et `kotlin-stdlib-jdk8` ont été
+     * fusionnés dans `kotlin-stdlib`. Les dépendances AndroidX tirent les deux
+     * générations à des versions différentes, et les mêmes classes se
+     * retrouvent dans deux archives : `checkDuplicateClasses` arrête la
+     * construction avec une vingtaine de « Duplicate class kotlin.* ».
+     *
+     * Le catalogue de versions de Kotlin les ramène toutes au même numéro ;
+     * les artefacts `jdk7`/`jdk8` deviennent alors de simples renvois vides,
+     * et il n'y a plus de doublon. Ce projet n'écrit pas une ligne de Kotlin
+     * — il en hérite, et c'est suffisant pour être concerné.
+     */
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.9.24')
+
     implementation 'androidx.appcompat:appcompat:1.7.0'
     // `WebViewAssetLoader` sert les fichiers embarqués sous une origine
     // `https://`. Sans lui, les modules ES sont refusés et l'écran reste
