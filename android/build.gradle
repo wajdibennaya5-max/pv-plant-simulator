@@ -1,0 +1,4 @@
+// Racine du projet Android. Les versions vivent ici, et nulle part ailleurs.
+plugins {
+    id 'com.android.application' version '8.7.3' apply false
+}

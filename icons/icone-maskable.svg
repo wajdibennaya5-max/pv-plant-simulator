@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img"
+  aria-label="Simulateur de centrale photovoltaïque">
+  <rect width="512" height="512" fill="#06282e"/>
+  <g transform="translate(256 256) scale(0.78) translate(-256 -256)">
+  <circle cx="256" cy="150" r="58" fill="#e8a33d"/>
+  <g stroke="#e8a33d" stroke-width="13" stroke-linecap="round" opacity=".85">
+    <path d="M256 54V32M256 268v-22M352 150h22M138 150h-22M324 82l16-16M188 218l-16 16M324 218l16 16M188 82l-16-16"/>
+  </g>
+  <g fill="none" stroke="#f6d9a8" stroke-width="14" stroke-linejoin="round">
+    <path d="M96 400h100v-72H96zM206 400h100v-72H206zM316 400h100v-72H316z"/>
+  </g>
+  <g stroke="#f6d9a8" stroke-width="9" opacity=".6">
+    <path d="M146 328v72M256 328v72M366 328v72"/>
+  </g>
+  <path d="M60 440h392" stroke="#c84a21" stroke-width="20" stroke-linecap="round"/>
+</g>
+</svg>

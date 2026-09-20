@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Simulateur de centrale photovoltaïque</title>
+<meta name="description" content="Dimensionne une centrale photovoltaïque à partir d’une puissance crête visée, puis la fait vivre : plan, schéma unifilaire, supervision, défauts et interverrouillages.">
+
+<!-- AUCUN SCRIPT EN LIGNE, ET AUCUNE ORIGINE EXTÉRIEURE. L'application n'a
+     pas de dépendance, ne parle à aucun serveur, et ne charge aucune police
+     distante : la politique peut donc être stricte sans rien concéder. -->
+<!-- `frame-ancestors` n'est PAS ici : un navigateur l'ignore lorsqu'elle
+     arrive par une balise `meta`, et une directive ignorée qui rassure est
+     pire que pas de directive du tout. Elle ne vaut qu'en en-tête HTTP, que
+     GitHub Pages ne permet pas de poser. L'APK, lui, n'expose aucune WebView
+     à l'extérieur. -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
+  img-src 'self' data:; connect-src 'self'; font-src 'self';
+  base-uri 'none'; form-action 'none'">
+
+<meta name="theme-color" content="#06282e">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icone-192.png">
+
+<style>
+:root{
+  --nuit:#06282e; --argile:#c84a21; --argile-vif:#e4693a;
+  --fond:#fbfaf8; --surface:#fff; --douce:#eef2f1;
+  --encre:#10262b; --encre-2:#4c6169; --encre-3:#7c9199;
+  --bord:#dde4e3;
+  --accent:var(--argile);
+  --titre:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --texte:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --large:1100px; --rayon:18px;
+
+  /* LES COULEURS D'ÉTAT SONT DES VARIABLES, jamais des valeurs écrites dans
+     une vue : un disjoncteur déclenché est rouge sur le plan, sur le schéma
+     et dans la supervision, sans qu'on ait à le vérifier trois fois. */
+  --cen-ok:#1f8a54; --cen-veille:#7c9199; --cen-alerte:#c98a15;
+  --cen-defaut:#c8321f; --cen-travaux:#7a5cc4; --cen-sourd:#9aa9ad;
+  --cen-dc:#c98a15; --cen-ac:#1f6f8a; --cen-mv:#c84a21; --cen-pe:#7c9199;
+  --cen-fond:#f4f7f6; --cen-grille:#dfe7e5;
+}
+:root:not([data-theme="light"]){
+  @media (prefers-color-scheme:dark){
+    --fond:#071f24; --surface:#0c2a30; --douce:#0a242a;
+    --encre:#eaf1f0; --encre-2:#a8bcc0; --encre-3:#7d959a;
+    --bord:#17434b; --accent:var(--argile-vif);
+    --cen-ok:#3fbd7d; --cen-veille:#7d959a; --cen-alerte:#e8b24a;
+    --cen-defaut:#f06a52; --cen-travaux:#a58ce8; --cen-sourd:#5d7b81;
+    --cen-dc:#e8b24a; --cen-ac:#5fb6d4; --cen-mv:#e4693a; --cen-pe:#5d7b81;
+    --cen-fond:#08232a; --cen-grille:#123840;
+  }
+}
+:root[data-theme="dark"]{
+  --fond:#071f24; --surface:#0c2a30; --douce:#0a242a;
+  --encre:#eaf1f0; --encre-2:#a8bcc0; --encre-3:#7d959a;
+  --bord:#17434b; --accent:var(--argile-vif);
+  --cen-ok:#3fbd7d; --cen-veille:#7d959a; --cen-alerte:#e8b24a;
+  --cen-defaut:#f06a52; --cen-travaux:#a58ce8; --cen-sourd:#5d7b81;
+  --cen-dc:#e8b24a; --cen-ac:#5fb6d4; --cen-mv:#e4693a; --cen-pe:#5d7b81;
+  --cen-fond:#08232a; --cen-grille:#123840;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--texte);color:var(--encre);background:var(--fond);
+  line-height:1.6;font-size:16.5px;-webkit-font-smoothing:antialiased}
+img,svg{max-width:100%}
+.wrap{max-width:var(--large);margin:0 auto;padding:0 16px}
+
+/* L'EN-TÊTE RESTE VISIBLE : sur un plan qu'on fait défiler, savoir où l'on
+   est compte plus que quelques pixels de hauteur gagnés. */
+header{position:sticky;top:0;z-index:10;background:var(--surface);
+  border-bottom:1px solid var(--bord);padding:11px 0;
+  padding-top:max(11px,env(safe-area-inset-top))}
+header .wrap{display:flex;align-items:center;gap:11px;justify-content:space-between}
+.marque{display:flex;align-items:center;gap:10px;min-width:0}
+.marque svg{width:30px;height:30px;flex:none}
+.marque b{font-family:var(--titre);font-size:15.5px;display:block;line-height:1.2}
+.marque span{font-size:12px;color:var(--encre-3);display:block}
+main{padding:20px 0 40px}
+h1{font-family:var(--titre);font-size:23px;margin:0 0 10px;line-height:1.25}
+.chapeau{margin:0 0 8px;color:var(--encre-2);font-size:15px}
+.avis{margin:14px 0 22px;padding:12px 14px;border-radius:12px;background:var(--douce);
+  font-size:14px;color:var(--encre-2);border-left:3px solid var(--cen-alerte)}
+.avis b{color:var(--encre)}
+.erreur{margin:0 0 16px;padding:12px 14px;border-radius:12px;font-size:14px;
+  background:var(--cen-defaut);color:#fff;font-weight:600}
+.reprise{margin:0 0 16px;padding:10px 13px;border-radius:11px;font-size:13.5px;
+  background:var(--douce);color:var(--encre-2)}
+footer{border-top:1px solid var(--bord);padding:20px 0;margin-top:36px;
+  padding-bottom:max(20px,env(safe-area-inset-bottom));
+  font-size:13px;color:var(--encre-3)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:10px 18px;justify-content:space-between}
+footer a{color:var(--encre-2)}
+.lien-bouton{min-height:44px;padding:10px 15px;font:inherit;font-size:14px;
+  cursor:pointer;border-radius:11px;border:1px solid var(--bord);
+  background:var(--surface);color:var(--encre)}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ─── SIMULATEUR DE CENTRALE ──────────────────────────────────────────────
+   Conçu pour un téléphone tenu en portrait : une seule colonne, des cibles
+   d'au moins 44 px, et aucun tableau qui déborde sans prévenir. */
+.cen{display:grid;gap:16px}
+.cen-entete{display:grid;gap:8px}
+.cen-titre-plan{margin:0;font-family:var(--titre);font-weight:700;font-size:17px}
+.cen-meteo{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;color:var(--encre-2)}
+.cen-meteo b{color:var(--encre)}
+
+.cen-reglages{display:grid;gap:12px}
+@media(min-width:640px){.cen-reglages{grid-template-columns:repeat(3,1fr)}}
+.cen-champ{display:grid;gap:5px;font-size:14px;color:var(--encre-2)}
+.cen-champ input,.cen-champ select{min-height:44px;padding:8px 11px;font:inherit;
+  color:var(--encre);background:var(--surface);border:1px solid var(--bord);
+  border-radius:11px;width:100%}
+.cen-champ input[type="range"]{padding:0}
+
+.cen-horloge{display:grid;gap:10px;align-items:end}
+@media(min-width:640px){.cen-horloge{grid-template-columns:1fr auto}}
+
+.cen-onglets,.cen-lectures{display:flex;flex-wrap:wrap;gap:8px}
+.cen-onglet,.cen-lecture,.cen-btn,.cen-cmd,.cen-def,.cen-acq{min-height:44px;
+  padding:10px 15px;font:inherit;font-size:14.5px;cursor:pointer;border-radius:11px;
+  border:1px solid var(--bord);background:var(--surface);color:var(--encre)}
+.cen-onglet{font-weight:600}
+.cen-onglet.cen-actif,.cen-lecture.cen-actif{background:var(--accent);
+  border-color:var(--accent);color:#fff}
+.cen-lecture{font-size:13.5px}
+.cen-btn:hover,.cen-onglet:hover,.cen-lecture:hover{border-color:var(--accent)}
+.cen-petit{min-height:38px;padding:7px 11px;font-size:13px}
+
+.cen-annonce{margin:0;min-height:22px;font-size:14px;color:var(--accent);font-weight:600}
+
+.cen-vue{border:1px solid var(--bord);border-radius:var(--rayon);overflow:hidden;
+  background:var(--surface)}
+.cen-plan,.cen-schema{display:block;width:100%;height:auto;touch-action:none}
+.cen-schema{padding:6px 0}
+.cen-lod{margin:0;padding:9px 13px;font-size:13px;color:var(--encre-2);
+  border-top:1px solid var(--bord)}
+.cen-zoom{display:flex;align-items:center;gap:9px;padding:9px 13px;flex-wrap:wrap;
+  border-top:1px solid var(--bord);font-size:13.5px;color:var(--encre-2)}
+.cen-zoom .cen-btn{min-width:46px;text-align:center}
+.cen-schema-tete{padding:11px 13px 0}
+
+.cen-objet{cursor:pointer}
+.cen-cible{cursor:pointer}
+.cen-etiq{font-family:var(--texte);font-size:8px;fill:var(--encre-2)}
+.cen-etiq-mes{fill:var(--encre-3);font-size:7.5px}
+@keyframes cen-clignote{0%,100%{opacity:1}50%{opacity:.32}}
+.cen-clignote{animation:cen-clignote 1.15s ease-in-out infinite}
+@keyframes cen-pulse{0%,100%{opacity:1}50%{opacity:.72}}
+.cen-pulse{animation:cen-pulse 2.6s ease-in-out infinite}
+.cen-hachure{opacity:.62}
+@keyframes cen-flux{to{stroke-dashoffset:-14}}
+.cen-flux{stroke-dasharray:7 7;animation:cen-flux .9s linear infinite}
+
+.cen-kpi{display:grid;gap:10px;grid-template-columns:repeat(2,1fr);padding:13px}
+@media(min-width:620px){.cen-kpi{grid-template-columns:repeat(3,1fr)}}
+.cen-kpi-c{padding:11px;border:1px solid var(--bord);border-radius:13px;
+  background:var(--fond)}
+.cen-kpi-l{margin:0;font-size:12.5px;color:var(--encre-3)}
+.cen-kpi-v{margin:3px 0;font-family:var(--titre);font-weight:800;font-size:20px}
+.cen-kpi-n{margin:0;font-size:12px;color:var(--encre-3)}
+
+.cen-pastille{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;
+  border-radius:999px;font-size:13px;font-weight:600;color:var(--c);
+  background:color-mix(in srgb,var(--c) 14%,transparent);border:1px solid var(--c)}
+.cen-pastille svg{width:14px;height:14px;fill:none;stroke:var(--c);stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+
+.cen-detail{border:1px solid var(--bord);border-radius:var(--rayon);
+  background:var(--surface);padding:15px}
+.cen-pan-tete{display:flex;gap:11px;align-items:start;justify-content:space-between;
+  flex-wrap:wrap;margin-bottom:11px}
+.cen-pan-tete h3{margin:2px 0 0;font-size:18px;font-family:var(--titre)}
+.cen-pan-sur{margin:0;font-size:12.5px;color:var(--encre-3);text-transform:uppercase;
+  letter-spacing:.04em}
+.cen-generique{margin:0 0 11px;padding:9px 11px;border-radius:10px;font-size:13px;
+  background:var(--douce);color:var(--encre-2)}
+.cen-agrege{margin:0 0 11px;font-size:13.5px;color:var(--encre-2)}
+.cen-bloc{margin-top:15px;padding-top:13px;border-top:1px solid var(--bord)}
+.cen-bloc h4,.cen-h4{margin:0 0 9px;font-family:var(--titre);font-size:14px;
+  text-transform:uppercase;letter-spacing:.04em;color:var(--encre-3)}
+.cen-dl{display:grid;grid-template-columns:auto 1fr;gap:5px 13px;margin:0;font-size:14px}
+.cen-dl dt{color:var(--encre-3)}
+.cen-dl dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.cen-fiche{margin-top:11px}
+
+.cen-cmds{display:flex;flex-wrap:wrap;gap:8px}
+.cen-cmd-non{opacity:.45;cursor:not-allowed}
+.cen-def{font-size:13px;border-style:dashed}
+.cen-refus{list-style:none;margin:11px 0 0;padding:0;display:grid;gap:7px;font-size:13px;
+  color:var(--encre-2)}
+.cen-refus li{padding:8px 11px;border-radius:9px;background:var(--douce)}
+.cen-refus i{display:block;font-style:normal;color:var(--accent);font-weight:600}
+.cen-consequence{margin:11px 0 0;font-size:13.5px;color:var(--cen-alerte);font-weight:600}
+
+.cen-verif-boite{border:1px solid var(--bord);border-radius:var(--rayon);
+  background:var(--surface);padding:13px 15px}
+.cen-verif-boite summary{cursor:pointer;font-weight:600;font-family:var(--titre)}
+.cen-verif{margin-top:11px}
+.cen-verif h4{margin:0 0 9px;font-family:var(--titre);font-size:14px}
+.cen-verif ul{list-style:none;padding:0;margin:0;display:grid;gap:8px;font-size:13.5px}
+.cen-verif li{padding:9px 11px;border-radius:10px;background:var(--douce);
+  border-left:3px solid var(--cen-sourd)}
+.cen-verif li b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.cen-g-defaut{border-left-color:var(--cen-defaut)!important}
+.cen-g-defaut b{color:var(--cen-defaut)}
+.cen-g-avertissement{border-left-color:var(--cen-alerte)!important}
+.cen-g-avertissement b{color:var(--cen-alerte)}
+.cen-g-information,.cen-g-inconnu{border-left-color:var(--cen-veille)!important}
+.cen-g-ok{color:var(--cen-ok)}
+.cen-verif-ok p{margin:0;font-size:14px;color:var(--cen-ok)}
+
+.cen-alarmes,.cen-events{list-style:none;padding:0;margin:0;display:grid;gap:7px;
+  font-size:13.5px}
+.cen-alarmes li,.cen-events li{display:grid;grid-template-columns:auto 1fr auto;gap:10px;
+  align-items:start;padding:9px 11px;border-radius:10px;background:var(--douce);
+  border-left:3px solid var(--cen-sourd)}
+.cen-events li{grid-template-columns:auto 1fr}
+.cen-h{color:var(--encre-3);font-variant-numeric:tabular-nums;font-size:12.5px}
+.cen-t i{display:block;font-style:normal;color:var(--encre-3);font-size:12.5px}
+.cen-acq{min-height:36px;padding:5px 10px;font-size:12.5px}
+.cen-acq[disabled]{opacity:.45;cursor:default}
+
+.cen-table{width:100%;border-collapse:collapse;font-size:13px;margin:0 0 15px;
+  display:block;overflow-x:auto;white-space:nowrap}
+.cen-table th,.cen-table td{padding:7px 9px;text-align:right;
+  border-bottom:1px solid var(--bord)}
+.cen-table th:first-child,.cen-table td:first-child{text-align:left;white-space:normal}
+.cen-table th{color:var(--encre-3);font-weight:600;font-size:12px;text-transform:uppercase}
+.cen-v-hors td{color:var(--cen-defaut)}
+.cen-v-verifier td{color:var(--cen-alerte)}
+.cen-ing,.cen-chantier{padding:0 13px 13px}
+.cen-ing h4{margin:15px 0 9px;font-family:var(--titre);font-size:14px}
+.cen-ing-tete{margin:0;padding:9px 11px;border-radius:10px;background:var(--douce);
+  font-size:13.5px;font-weight:600}
+.cen-avancement{margin:0 0 13px;font-size:14px;color:var(--encre-2)}
+
+.cen-legende{list-style:none;display:flex;flex-wrap:wrap;gap:7px 15px;margin:0;
+  padding:9px 13px;font-size:12.5px;color:var(--encre-2);border-top:1px solid var(--bord)}
+.cen-legende i{display:inline-block;width:11px;height:11px;border-radius:3px;
+  background:var(--c);margin-right:6px;vertical-align:-1px}
+.cen-vide,.cen-vide-p{color:var(--encre-3);font-size:14px}
+.cen-vide p{margin:0}
+.cen-resume{margin:0;padding:9px 13px;font-size:13.5px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="marque">
+      <svg viewBox="0 0 48 48" aria-hidden="true" fill="none">
+        <circle cx="24" cy="17" r="9.5" fill="#e8a33d"/>
+        <path d="M4 30 24 15l20 15" stroke="#0a3a42" stroke-width="3.4"
+          stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M6 36h36" stroke="#c84a21" stroke-width="3.4" stroke-linecap="round"/>
+      </svg>
+      <span><b>Simulateur de centrale</b><span>Photovoltaïque — grande puissance</span></span>
+    </div>
+    <button type="button" class="lien-bouton" id="effacer"
+      title="Oublier la centrale en cours et repartir d’un ouvrage neuf">Réinitialiser</button>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <h1>Dimensionner une centrale, puis la faire vivre</h1>
+    <p class="chapeau">Donnez une puissance crête visée : le moteur en déduit
+      une architecture complète — longueur de chaîne, onduleurs,
+      transformateurs, cellules, protections, câbles. Ouvrez un disjoncteur,
+      simulez un défaut, et regardez ce qui tombe.</p>
+
+    <p class="avis"><b>Les caractéristiques de matériel sont génériques et
+      annoncées comme telles</b> : aucune fiche constructeur n’est inventée.
+      Cet outil ne remplace pas une étude d’exécution signée.</p>
+
+    <p class="erreur" id="erreur" role="alert" hidden></p>
+    <p class="reprise" id="reprise" role="status" hidden></p>
+
+    <div id="ecran"></div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Simulateur de centrale photovoltaïque — <span id="annee"></span></span>
+    <span>Tout reste dans votre navigateur. Aucune donnée n’est envoyée.</span>
+  </div>
+</footer>
+
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>

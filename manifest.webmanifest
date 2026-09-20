@@ -1,0 +1,20 @@
+{
+  "name": "Simulateur de centrale photovoltaïque",
+  "short_name": "Centrale PV",
+  "description": "Dimensionne une centrale photovoltaïque puis la fait vivre : plan, schéma unifilaire, supervision, défauts et interverrouillages.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fbfaf8",
+  "theme_color": "#06282e",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    { "src": "./icons/icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "./icons/icone-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "./icons/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "./icons/icone.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

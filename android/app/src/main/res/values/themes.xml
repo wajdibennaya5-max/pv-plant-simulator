@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- La barre d'état reprend la couleur de l'en-tête de la page : sans
+         cela, une bande claire coupe l'application en deux en thème sombre. -->
+    <style name="Theme.Centrale" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:statusBarColor">#06282e</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

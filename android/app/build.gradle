@@ -1,0 +1,96 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'tn.solarys.centrale'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "tn.solarys.centrale"
+        minSdk 24          // Android 7 : la WebView y est déjà un module mis à jour par le Play Store
+        targetSdk 35
+        versionCode 1
+        versionName "1.0"
+    }
+
+    /**
+     * LES FICHIERS DE L'APPLICATION WEB SONT LA SOURCE, PAS UNE COPIE.
+     *
+     * On pointe le dossier d'« assets » sur un répertoire de construction que
+     * la tâche ci-dessous remplit depuis la racine du dépôt. Sans cela, il
+     * faudrait recopier le site à la main dans le projet Android — et les
+     * deux copies divergeraient au premier correctif.
+     */
+    sourceSets {
+        main {
+            assets.srcDirs += ["${layout.buildDirectory.get()}/web-assets"]
+        }
+    }
+
+    /**
+     * LA SIGNATURE DE PUBLICATION N'EST PAS DANS LE DÉPÔT.
+     *
+     * Une clé de signature versionnée est une clé perdue : quiconque lit le
+     * dépôt peut publier une mise à jour de l'application. Elle arrive donc
+     * par l'environnement, et la configuration ne s'active que si elle est là.
+     *
+     * Sans clé, la chaîne produit quand même un APK de développement,
+     * installable — c'est ce qu'il faut pour essayer. Voir docs/apk.md.
+     */
+    signingConfigs {
+        release {
+            def magasin = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (magasin) {
+                storeFile file(magasin)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            if (System.getenv("ANDROID_KEYSTORE_PATH")) {
+                signingConfig signingConfigs.release
+            }
+            minifyEnabled false     // rien à réduire : aucune dépendance, aucun code mort
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
+                          'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    // `WebViewAssetLoader` sert les fichiers embarqués sous une origine
+    // `https://`. Sans lui, les modules ES sont refusés et l'écran reste
+    // blanc. C'est la seule dépendance qui ne soit pas négociable.
+    implementation 'androidx.webkit:webkit:1.12.1'
+}
+
+/**
+ * COPIE L'APPLICATION WEB DANS LES ASSETS.
+ *
+ * Une seule source de vérité : la racine du dépôt. On n'embarque ni les
+ * tests, ni le projet Android lui-même, ni les fichiers de développement —
+ * ils gonfleraient l'APK sans rien apporter à l'utilisateur.
+ */
+tasks.register('copierApplicationWeb', Copy) {
+    from(rootProject.file("..")) {
+        include "index.html", "manifest.webmanifest", "sw.js"
+        include "js/**", "icons/**"
+    }
+    into layout.buildDirectory.dir("web-assets/www")
+}
+
+tasks.withType(com.android.build.gradle.tasks.MergeSourceSetFolders).configureEach {
+    dependsOn 'copierApplicationWeb'
+}
