@@ -81,6 +81,17 @@ npm test    # 198 tests, sans navigateur
 
 Aucune dépendance à installer.
 
+## Télécharger l'APK
+
+**[app-debug.apk](https://github.com/wajdibennaya5-max/pv-plant-simulator/releases/download/dernier/app-debug.apk)** —
+reconstruit à chaque modification de `main`, l'adresse ne bouge pas.
+
+Ouvrez-le sur le téléphone ; Android demandera d'autoriser l'installation
+depuis cette source, ce qui est normal pour un fichier qui ne vient pas du
+Play Store. Cet APK porte `android:debuggable` : bon pour essayer et pour un
+usage interne, pas pour une distribution large. Pour une version signée par
+vos soins, voir `docs/apk.md`.
+
 ## Installer sur un téléphone
 
 **Sans APK** — ouvrez le site dans Chrome, menu → « Ajouter à l'écran
