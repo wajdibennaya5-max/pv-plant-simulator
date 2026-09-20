@@ -81,6 +81,36 @@ jobs:
           path: android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
+      # ── UN LIEN DE TÉLÉCHARGEMENT QUI NE BOUGE PAS ──────────────────────
+      #
+      # Un artefact d'exécution ne se télécharge qu'en étant connecté à
+      # GitHub, et il expire au bout de quelques semaines : ce n'est pas un
+      # lien qu'on envoie à quelqu'un. Une publication, si — son adresse est
+      # publique, stable, et sert toujours le dernier APK construit.
+      - name: Publier le dernier APK
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dernier
+          name: Dernier APK
+          prerelease: true
+          body: |
+            APK de développement, reconstruit à chaque modification de `main`.
+
+            **Installation** — téléchargez `app-debug.apk` ci-dessous et
+            ouvrez-le sur le téléphone. Android demandera d'autoriser
+            l'installation depuis cette source : c'est normal pour un fichier
+            qui ne vient pas du Play Store.
+
+            Cet APK porte `android:debuggable` : il convient pour essayer et
+            pour un usage interne, pas pour une distribution large. Pour une
+            version signée par vos soins, voir `docs/apk.md`.
+
+            Aucun APK n'est nécessaire pour utiliser l'application : elle
+            s'installe aussi depuis Chrome par « Ajouter à l'écran d'accueil »,
+            et fonctionne sans réseau.
+          files: android/app/build/outputs/apk/**/*.apk
+
       - name: Attacher l'APK à la version publiée
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
